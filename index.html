@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evercommit — Living Fractal Tree</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e0c;
+      --bg-secondary: #0f1512;
+      --text: #c8d6ce;
+      --text-dim: #5a6e60;
+      --accent: #4ade80;
+      --accent-dim: #22543d;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      animation: fadeIn 1.2s ease;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      text-shadow: 0 0 60px rgba(74, 222, 128, 0.15);
+    }
+
+    header p {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== TREE PANEL ===== */
+    .tree-panel {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(74, 222, 128, 0.08);
+      border-radius: 12px 12px 0 0;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tree-panel::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: linear-gradient(to top, rgba(74, 222, 128, 0.03), transparent);
+      pointer-events: none;
+    }
+
+    #tree-svg {
+      width: 100%;
+      display: block;
+      border-radius: 8px;
+    }
+
+    /* Growth stats overlay */
+    .growth-overlay {
+      position: absolute;
+      top: 28px;
+      left: 28px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    .growth-stat {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .growth-label {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 300;
+      min-width: 68px;
+    }
+
+    .growth-value {
+      font-size: 0.78rem;
+      color: var(--text);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      transition: all 0.3s ease;
+    }
+
+    /* Inline controls */
+    .inline-controls {
+      position: absolute;
+      top: 28px;
+      right: 28px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background: rgba(74, 222, 128, 0.06);
+      border: 1px solid rgba(74, 222, 128, 0.1);
+      color: var(--accent);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.62rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 500;
+      backdrop-filter: blur(8px);
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(74, 222, 128, 0.12);
+      border-color: rgba(74, 222, 128, 0.25);
+    }
+
+    /* ===== STAT BARS ===== */
+    .stat-bars {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(74, 222, 128, 0.08);
+      border-top: 1px solid rgba(74, 222, 128, 0.04);
+      border-radius: 0 0 12px 12px;
+      padding: 24px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .stat-bars-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .stat-bars-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: var(--accent);
+      letter-spacing: 0.3px;
+    }
+
+    .stat-bars-date {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .stat-bar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .stat-bar-label {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-bar-icon {
+      font-size: 0.82rem;
+      line-height: 1;
+    }
+
+    .stat-bar-value {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.4s ease;
+    }
+
+    .stat-bar-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+
+    .stat-bar-fill::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 12px;
+      background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15));
+      border-radius: 0 3px 3px 0;
+    }
+
+    .stat-bar-fill.trees {
+      background: linear-gradient(90deg, #166534, #22c55e);
+    }
+
+    .stat-bar-fill.co2 {
+      background: linear-gradient(90deg, #1e3a5f, #38bdf8);
+    }
+
+    .stat-bar-fill.renewable {
+      background: linear-gradient(90deg, #713f12, #eab308);
+    }
+
+    .stat-bar-fill.ocean {
+      background: linear-gradient(90deg, #164e63, #06b6d4);
+    }
+
+    .stat-bar-fill.air {
+      background: linear-gradient(90deg, #3b0764, #a855f7);
+    }
+
+    .stat-bar-fill.wildlife {
+      background: linear-gradient(90deg, #7c2d12, #f97316);
+    }
+
+    .stat-bar-sub {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      opacity: 0.7;
+      margin-top: -3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-bar-delta {
+      font-size: 0.6rem;
+      font-weight: 400;
+      transition: all 0.4s ease;
+    }
+
+    .stat-bar-delta.positive {
+      color: #4ade80;
+    }
+
+    .stat-bar-delta.negative {
+      color: #f87171;
+    }
+
+    .stat-bar-delta.neutral {
+      color: var(--text-dim);
+    }
+
+    .overall-score {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      background: rgba(74, 222, 128, 0.04);
+      border: 1px solid rgba(74, 222, 128, 0.08);
+      border-radius: 10px;
+      margin-top: 4px;
+    }
+
+    .overall-score-ring {
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+    }
+
+    .overall-score-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .overall-score-label {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      font-weight: 300;
+    }
+
+    .overall-score-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: var(--accent);
+      transition: all 0.4s ease;
+    }
+
+    .overall-score-desc {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+
+    /* ===== CTA SECTION ===== */
+    .cta-section {
+      margin-top: 24px;
+    }
+
+    .cta-panel {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(74, 222, 128, 0.08);
+      border-radius: 12px;
+      padding: 40px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.2), transparent);
+    }
+
+    .cta-panel::after {
+      content: '';
+      position: absolute;
+      top: -80px;
+      right: -80px;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(74, 222, 128, 0.04), transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .cta-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      color: var(--accent);
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    .cta-header p {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+      letter-spacing: 0.2px;
+    }
+
+    .cta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    @media (max-width: 900px) {
+      .cta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .cta-card {
+      background: rgba(74, 222, 128, 0.02);
+      border: 1px solid rgba(74, 222, 128, 0.06);
+      border-radius: 10px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .cta-card:hover {
+      border-color: rgba(74, 222, 128, 0.15);
+      background: rgba(74, 222, 128, 0.04);
+      transform: translateY(-2px);
+    }
+
+    .cta-card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .cta-card h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .cta-card p {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .cta-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cta-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(74, 222, 128, 0.04);
+      border: 1px solid rgba(74, 222, 128, 0.06);
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.68rem;
+      font-weight: 400;
+      transition: all 0.25s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .cta-link:hover {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: rgba(74, 222, 128, 0.2);
+      color: var(--accent);
+    }
+
+    .cta-link-icon {
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .cta-link-text {
+      flex: 1;
+      line-height: 1.3;
+    }
+
+    .cta-link-tag {
+      font-size: 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      font-weight: 500;
+      background: rgba(74, 222, 128, 0.06);
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .cta-link-tag.donate {
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .cta-link-tag.code {
+      color: #a78bfa;
+      background: rgba(167, 139, 250, 0.08);
+    }
+
+    .cta-link-tag.share {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .share-section {
+      background: rgba(74, 222, 128, 0.03);
+      border: 1px solid rgba(74, 222, 128, 0.08);
+      border-radius: 10px;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    @media (max-width: 700px) {
+      .share-section {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+
+    .share-text {
+      flex: 1;
+    }
+
+    .share-text h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .share-text p {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .share-buttons {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .share-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .share-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .share-btn.github {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .share-btn.github:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .share-btn.twitter {
+      background: rgba(29, 161, 242, 0.1);
+      color: #1da1f2;
+      border: 1px solid rgba(29, 161, 242, 0.15);
+    }
+
+    .share-btn.twitter:hover {
+      background: rgba(29, 161, 242, 0.18);
+    }
+
+    .share-btn.copy {
+      background: rgba(74, 222, 128, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(74, 222, 128, 0.15);
+    }
+
+    .share-btn.copy:hover {
+      background: rgba(74, 222, 128, 0.14);
+    }
+
+    .share-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: #141e18;
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.7rem;
+      color: var(--text);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 50;
+      max-width: 220px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    .tooltip .tip-date {
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .tooltip .tip-metric {
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #141e18;
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      color: var(--accent);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-family: 'IBM Plex Mono', monospace;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .copy-toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grain"></div>
+  <div class="tooltip" id="tooltip">
+    <div class="tip-date"></div>
+    <div class="tip-metric"></div>
+  </div>
+
+  <div class="container">
+    <header>
+      <h1>Evercommit</h1>
+      <p>Environmental progress, one branch per day</p>
+    </header>
+
+    <!-- TREE -->
+    <div class="tree-panel">
+      <div class="growth-overlay">
+        <div class="growth-stat">
+          <span class="growth-label">Day</span>
+          <span class="growth-value" id="day-display">0</span>
+        </div>
+        <div class="growth-stat">
+          <span class="growth-label">Commits</span>
+          <span class="growth-value" id="commit-count">…</span>
+        </div>
+        <div class="growth-stat">
+          <span class="growth-label">Branches</span>
+          <span class="growth-value" id="branch-count">0</span>
+        </div>
+        <div class="growth-stat">
+          <span class="growth-label">Depth</span>
+          <span class="growth-value" id="depth-display">0</span>
+        </div>
+      </div>
+
+      <div class="inline-controls">
+        <button class="ctrl-btn" id="btn-next">▶ Next</button>
+        <button class="ctrl-btn" id="btn-auto">⟳ Auto</button>
+        <button class="ctrl-btn" id="btn-reset">✕ Reset</button>
+      </div>
+
+      <svg id="tree-svg" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="100%" r="60%">
+            <stop offset="0%" stop-color="rgba(74,222,128,0.06)" />
+            <stop offset="100%" stop-color="transparent" />
+          </radialGradient>
+          <filter id="soft-glow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <rect width="800" height="600" fill="transparent" />
+        <ellipse cx="400" cy="590" rx="200" ry="8" fill="rgba(74,222,128,0.04)" />
+        <rect x="0" y="0" width="800" height="600" fill="url(#glow)" />
+        <g id="tree-group"></g>
+      </svg>
+    </div>
+
+    <!-- STAT BARS -->
+    <div class="stat-bars">
+      <div class="stat-bars-header">
+        <span class="stat-bars-title">Daily Metrics</span>
+        <span class="stat-bars-date" id="bars-date">—</span>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">🌳</span> Trees Planted</span>
+          <span class="stat-bar-value" id="bar-trees-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill trees" id="bar-trees-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>of 60,000 daily goal</span><span class="stat-bar-delta neutral"
+            id="bar-trees-delta">—</span></div>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">💨</span> CO₂ Avoided</span>
+          <span class="stat-bar-value" id="bar-co2-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill co2" id="bar-co2-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>of 1,200 t daily goal</span><span class="stat-bar-delta neutral"
+            id="bar-co2-delta">—</span></div>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">⚡</span> Renewable Energy Added</span>
+          <span class="stat-bar-value" id="bar-renew-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill renewable" id="bar-renew-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>of 500 MW daily goal</span><span class="stat-bar-delta neutral"
+            id="bar-renew-delta">—</span></div>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">🌊</span> Ocean Cleanup</span>
+          <span class="stat-bar-value" id="bar-ocean-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill ocean" id="bar-ocean-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>of 80 t daily goal</span><span class="stat-bar-delta neutral"
+            id="bar-ocean-delta">—</span></div>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">🏭</span> Air Quality Index</span>
+          <span class="stat-bar-value" id="bar-air-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill air" id="bar-air-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>target: ≤ 50 AQI (good)</span><span class="stat-bar-delta neutral"
+            id="bar-air-delta">—</span></div>
+      </div>
+
+      <div class="stat-bar-item">
+        <div class="stat-bar-top">
+          <span class="stat-bar-label"><span class="stat-bar-icon">🦎</span> Species Recovery Index</span>
+          <span class="stat-bar-value" id="bar-wild-val">—</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-fill wildlife" id="bar-wild-fill" style="width:0%"></div>
+        </div>
+        <div class="stat-bar-sub"><span>composite index (0–100)</span><span class="stat-bar-delta neutral"
+            id="bar-wild-delta">—</span></div>
+      </div>
+
+      <div class="overall-score">
+        <svg class="overall-score-ring" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(74,222,128,0.08)" stroke-width="4" />
+          <circle id="score-ring" cx="26" cy="26" r="22" fill="none" stroke="var(--accent)" stroke-width="4"
+            stroke-dasharray="138.23" stroke-dashoffset="138.23" stroke-linecap="round" transform="rotate(-90 26 26)"
+            style="transition: stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1), stroke 0.4s ease;" />
+        </svg>
+        <div class="overall-score-info">
+          <span class="overall-score-label">Composite Score</span>
+          <span class="overall-score-value" id="overall-score-val">—</span>
+          <span class="overall-score-desc" id="overall-score-desc">Waiting for data…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA SECTION -->
+    <div class="cta-section">
+      <div class="cta-panel">
+        <div class="cta-header">
+          <h2>🌱 Help This Tree Grow</h2>
+          <p>This tree only thrives when the planet does. Contribute code to open source projects driving real
+            environmental change, or donate to the most credible and cost-effective climate organizations in the world.
+          </p>
+        </div>
+
+        <div class="cta-grid">
+          <div class="cta-card">
+            <span class="cta-card-icon">💚</span>
+            <h3>Water This Tree</h3>
+            <p>These organizations have been rigorously evaluated for cost-effectiveness by independent charity
+              evaluators. Every dollar goes further here.</p>
+            <div class="cta-links">
+              <a href="https://www.givinggreen.earth/top-climate-change-nonprofit-donations-recommendations"
+                target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🌍</span>
+                <span class="cta-link-text">Giving Green Fund — portfolio of top climate orgs</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+              <a href="https://www.catf.us/donate/" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">⚡</span>
+                <span class="cta-link-text">Clean Air Task Force — clean energy innovation</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+              <a href="https://www.gfi.org/donate" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🌿</span>
+                <span class="cta-link-text">Good Food Institute — alt proteins, -10% emissions</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+              <a href="https://www.projectinnerspace.org/" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🌋</span>
+                <span class="cta-link-text">Project InnerSpace — global geothermal energy</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+              <a href="https://opportunitygreen.org/" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🚢</span>
+                <span class="cta-link-text">Opportunity Green — aviation & shipping emissions</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+              <a href="https://theoceancleanup.com/donate/" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🌊</span>
+                <span class="cta-link-text">The Ocean Cleanup — ocean plastic removal</span>
+                <span class="cta-link-tag donate">donate</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="cta-card">
+            <span class="cta-card-icon">🛠️</span>
+            <h3>Build a Branch</h3>
+            <p>Open source projects making real-world environmental impact. Contribute code, data, or documentation —
+              every commit counts.</p>
+            <div class="cta-links">
+              <a href="https://github.com/electricitymaps/electricitymaps-contrib" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">⚡</span>
+                <span class="cta-link-text">Electricity Maps — real-time global CO₂ grid data</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/openclimatefix" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">☀️</span>
+                <span class="cta-link-text">Open Climate Fix — ML for solar forecasting</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/protontypes/open-sustainable-technology" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">📊</span>
+                <span class="cta-link-text">OpenSustain.tech — directory of 1,000+ green projects</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/fathomnet" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🐙</span>
+                <span class="cta-link-text">FathomNet — AI for ocean biodiversity monitoring</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/publiclab" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🔬</span>
+                <span class="cta-link-text">Public Lab — citizen science environmental tools</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/greenpeace/planet4" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">✊</span>
+                <span class="cta-link-text">Greenpeace Planet 4 — global engagement platform</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="cta-card">
+            <span class="cta-card-icon">📚</span>
+            <h3>Deepen Your Roots</h3>
+            <p>Research, curated data, and resources to understand the climate crisis and find where your skills or
+              dollars have the highest leverage.</p>
+            <div class="cta-links">
+              <a href="https://www.effectiveenvironmentalism.org/climate-charities" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">🎯</span>
+                <span class="cta-link-text">Effective Environmentalism — evidence-based giving guide</span>
+                <span class="cta-link-tag">learn</span>
+              </a>
+              <a href="https://drawdown.org/solutions/table-of-solutions" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">📈</span>
+                <span class="cta-link-text">Project Drawdown — top 100 climate solutions ranked</span>
+                <span class="cta-link-tag">learn</span>
+              </a>
+              <a href="https://github.com/KKulma/climate-change-data" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🗂️</span>
+                <span class="cta-link-text">Climate Change Data — APIs, open data & ML projects</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://github.com/daviddao/code-against-climate-change" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">🌏</span>
+                <span class="cta-link-text">Code Against Climate Change — curated tech projects</span>
+                <span class="cta-link-tag code">code</span>
+              </a>
+              <a href="https://www.givinggreen.earth/post/2024-top-nonprofits" target="_blank" rel="noopener"
+                class="cta-link">
+                <span class="cta-link-icon">🔍</span>
+                <span class="cta-link-text">Giving Green 2024 research — deep dive methodology</span>
+                <span class="cta-link-tag">learn</span>
+              </a>
+              <a href="https://opensustain.tech/" target="_blank" rel="noopener" class="cta-link">
+                <span class="cta-link-icon">🌐</span>
+                <span class="cta-link-text">OpenSustain.tech — the full open source directory</span>
+                <span class="cta-link-tag">learn</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="share-section">
+          <div class="share-text">
+            <h3>🌲 Spread the Seeds</h3>
+            <p>Share this project to help the community grow. Star the repo, fork it, or send it to someone who cares
+              about the planet. Every share plants the idea that code can make a difference.</p>
+          </div>
+          <div class="share-buttons">
+            <a href="https://github.com/your-username/evercommit" target="_blank" rel="noopener"
+              class="share-btn github">
+              <svg viewBox="0 0 16 16">
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+              Star on GitHub
+            </a>
+            <a href="https://twitter.com/intent/tweet?text=Check%20out%20Evercommit%20%E2%80%94%20an%20open%20source%20project%20that%20visualizes%20daily%20environmental%20progress%20as%20a%20growing%20fractal%20tree%20%F0%9F%8C%B3&url=https%3A%2F%2Fgithub.com%2Fyour-username%2Fevercommit"
+              target="_blank" rel="noopener" class="share-btn twitter">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              Post on X
+            </a>
+            <button class="share-btn copy" onclick="copyLink()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              Copy Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="copy-toast" id="copy-toast">✓ Link copied to clipboard</div>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const treeGroup = document.getElementById("tree-group");
+    const tooltip = document.getElementById("tooltip");
+
+    let segments = [];
+    let currentDay = 0;
+    let autoInterval = null;
+    let maxDepthReached = 0;
+    let prevDayData = null;
+    let totalCommits = 0;
+    let commitBranches = []; // branches grown from real commits
+
+    // --- Tracked repos (Build a Branch repos) ---
+    const TRACKED_REPOS = [
+      { owner: 'electricitymaps', repo: 'electricitymaps-contrib', label: 'Electricity Maps' },
+      { owner: 'openclimatefix', repo: 'Open-Source-Quartz-Solar-Forecast', label: 'Open Climate Fix' },
+      { owner: 'protontypes', repo: 'open-sustainable-technology', label: 'OpenSustain.tech' },
+      { owner: 'fathomnet', repo: 'fathomnet-py', label: 'FathomNet' },
+      { owner: 'publiclab', repo: 'plots2', label: 'Public Lab' },
+      { owner: 'greenpeace', repo: 'planet4-master-theme', label: 'Greenpeace Planet 4' },
+    ];
+
+    // --- Green palette (70-100% green) ---
+    const GREEN_PALETTE = [
+      '#16a34a', '#15803d', '#22c55e', '#4ade80', '#166534',
+      '#14532d', '#86efac', '#bbf7d0', '#34d399', '#059669',
+      '#10b981', '#047857', '#065f46', '#a7f3d0', '#6ee7b7',
+    ];
+
+    function randomGreen(seed) {
+      const idx = Math.floor(seededRand(seed) * GREEN_PALETTE.length);
+      return GREEN_PALETTE[idx];
+    }
+
+    function seededRand(seed) {
+      const s = Math.sin(seed) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    // --- Fetch commits from GitHub API ---
+    async function fetchAllCommits() {
+      const commitData = { total: 0, byRepo: [], recent: [] };
+      const since = new Date();
+      since.setDate(since.getDate() - 30); // last 30 days
+      const sinceISO = since.toISOString();
+
+      const fetches = TRACKED_REPOS.map(async (r) => {
+        try {
+          const url = `https://api.github.com/repos/${r.owner}/${r.repo}/commits?since=${sinceISO}&per_page=100`;
+          const res = await fetch(url);
+          if (!res.ok) return { ...r, count: 0, commits: [] };
+          const data = await res.json();
+          return { ...r, count: data.length, commits: data };
+        } catch {
+          return { ...r, count: 0, commits: [] };
+        }
+      });
+
+      const results = await Promise.all(fetches);
+      results.forEach(r => {
+        commitData.total += r.count;
+        commitData.byRepo.push({ label: r.label, owner: r.owner, repo: r.repo, count: r.count });
+        r.commits.forEach(c => {
+          commitData.recent.push({
+            repo: r.label,
+            repoFull: `${r.owner}/${r.repo}`,
+            sha: c.sha?.substring(0, 7) || '???',
+            message: c.commit?.message?.split('\n')[0]?.substring(0, 60) || 'commit',
+            author: c.commit?.author?.name || c.author?.login || 'unknown',
+            date: c.commit?.author?.date || '',
+          });
+        });
+      });
+
+      // Sort recent by date desc
+      commitData.recent.sort((a, b) => new Date(b.date) - new Date(a.date));
+      return commitData;
+    }
+
+    // --- Day data generation ---
+    // --- Real Data Integration ---
+    const START_DATE = new Date();
+    START_DATE.setDate(START_DATE.getDate() - 30); // Start simulation 30 days ago
+
+    function getCommitsForDay(dayIndex) {
+      if (!window._commitData || !window._commitData.recent) return 0;
+      const targetDate = new Date(START_DATE);
+      targetDate.setDate(targetDate.getDate() + dayIndex);
+      const dateStr = targetDate.toDateString();
+
+      return window._commitData.recent.filter(c => {
+        return new Date(c.date).toDateString() === dateStr;
+      }).length;
+    }
+
+    function generateDayData(day) {
+      // Use real commit activity if available, otherwise fallback to low baseline
+      // "Real sources" -> Commits drive the metrics.
+      // Scaling: 1 commit = 100 Trees, 2t CO2, 1MW Energy, 0.2t Ocean, +2 AQI pts, +1 Wildlife
+      // Base (passive): Small daily growth even without commits (nature grows)
+
+      const realCommits = getCommitsForDay(day);
+      const activity = realCommits > 0 ? realCommits : 0;
+
+      // Random fluctuation for "natural" variation, but driven by activity
+      const r = seededRand(day * 127.1 + 311.7);
+
+      // Base values (natural growth)
+      const baseTrees = 100 + r * 50;
+      const baseCO2 = 5 + r * 2;
+      const baseRenew = 2 + r * 2;
+
+      // Impact multipliers
+      const trees = Math.floor(baseTrees + activity * 500);
+      const co2 = Math.floor(baseCO2 + activity * 20);
+      const renewable = Math.floor(baseRenew + activity * 10);
+      const ocean = Math.max(0, parseFloat((0.1 + activity * 0.5 + r * 0.2).toFixed(1)));
+      const air = Math.min(150, Math.floor(20 + activity * 5 + r * 10)); // AQI
+      const wildlife = Math.min(100, parseFloat((10 + activity * 2 + r * 5).toFixed(1)));
+
+      const tS = Math.min(1, trees / 5000); // adjusted goals 
+      const cS = Math.min(1, co2 / 200);
+      const rS = Math.min(1, renewable / 100);
+      const oS = Math.min(1, ocean / 10);
+      const aS = Math.min(1, air / 50); // simplified score
+      const wS = wildlife / 100;
+      const score = Math.min(1, (tS + cS + rS + oS + aS + wS) / 6);
+
+      const date = new Date(START_DATE);
+      date.setDate(date.getDate() + day);
+
+      return {
+        day, score, trees, co2, renewable, ocean, air, wildlife,
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        treesPct: Math.min(100, (trees / 5000) * 100),
+        co2Pct: Math.min(100, (co2 / 200) * 100),
+        renewPct: Math.min(100, (renewable / 100) * 100),
+        oceanPct: Math.min(100, (ocean / 10) * 100),
+        airPct: Math.min(100, (air / 50) * 100),
+        wildPct: Math.min(100, wildlife),
+        scoreLabel: score > 0.75 ? 'Excellent' : score > 0.55 ? 'Good' : score > 0.35 ? 'Moderate' : score > 0.2 ? 'Below avg' : 'Poor',
+      };
+    }
+
+    function scoreToColor(score) {
+      if (score > 0.75) return '#22c55e';
+      if (score > 0.55) return '#84cc16';
+      if (score > 0.35) return '#eab308';
+      if (score > 0.2) return '#f97316';
+      return '#a16207';
+    }
+
+    function formatDelta(current, previous, suffix, invert) {
+      if (previous === null || previous === undefined) return { text: '—', cls: 'neutral' };
+      const diff = current - previous;
+      if (Math.abs(diff) < 0.01) return { text: '→ no change', cls: 'neutral' };
+      const isGood = invert ? diff < 0 : diff > 0;
+      const sign = diff > 0 ? '+' : '';
+      let f;
+      if (Math.abs(diff) >= 1000) f = `${sign}${(diff / 1000).toFixed(1)}k`;
+      else if (Math.abs(diff) >= 1) f = `${sign}${Math.round(diff)}`;
+      else f = `${sign}${diff.toFixed(1)}`;
+      return { text: `${f} ${suffix}`, cls: isGood ? 'positive' : 'negative' };
+    }
+
+    function setDelta(id, d) {
+      const el = document.getElementById(id);
+      el.textContent = d.text;
+      el.className = 'stat-bar-delta ' + d.cls;
+    }
+
+    // --- Fractal tree ---
+    let fullTree = [];
+    let treeGeneration = 0;
+
+    function buildTreeStructure(gen) {
+      const all = [];
+      const baseAngle = -Math.PI / 2 + (seededRand(gen * 999.1) - 0.5) * 0.06;
+      const baseLen = 100 + seededRand(gen * 777.3) * 20;
+
+      function branch(x, y, angle, length, depth, maxD) {
+        if (depth > maxD || length < 3) return;
+        const ex = x + Math.cos(angle) * length;
+        const ey = y + Math.sin(angle) * length;
+        all.push({ x1: x, y1: y, x2: ex, y2: ey, depth, length });
+        const r1 = seededRand(x * 12.9898 + y * 78.233 + depth * 45.164 + gen * 31.7);
+        const r2 = seededRand(x * 63.7264 + y * 10.873 + depth * 91.42 + gen * 17.3);
+        const spread = 0.35 + r1 * 0.25, shrink = 0.62 + r2 * 0.12, asym = (r1 - 0.5) * 0.12;
+        branch(ex, ey, angle - spread + asym, length * shrink, depth + 1, maxD);
+        branch(ex, ey, angle + spread + asym, length * (shrink - 0.02), depth + 1, maxD);
+        if (r2 > 0.65 && depth < maxD - 1) branch(ex, ey, angle + (r1 - 0.5) * 0.8, length * shrink * 0.7, depth + 1, maxD);
+      }
+      branch(400, 580, baseAngle, baseLen, 0, 10);
+      return all;
+    }
+
+    fullTree = buildTreeStructure(0);
+    const branchesPerDay = Math.max(1, Math.floor(fullTree.length / 365));
+
+    function getBranch(index) {
+      while (index >= fullTree.length) {
+        treeGeneration++;
+        fullTree = fullTree.concat(buildTreeStructure(treeGeneration));
+      }
+      return fullTree[index];
+    }
+
+    // --- Draw a regular day-driven segment ---
+    function drawSegment(b, dd) {
+      const color = scoreToColor(dd.score);
+      const w = Math.max(1, 7 - b.depth * 0.6);
+      const op = b.depth < 3 ? 0.9 : 0.55 + (1 - b.depth / 10) * 0.35;
+
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", b.x1); line.setAttribute("y1", b.y1);
+      line.setAttribute("x2", b.x1); line.setAttribute("y2", b.y1);
+      line.setAttribute("stroke", color); line.setAttribute("stroke-width", w);
+      line.setAttribute("stroke-linecap", "round"); line.setAttribute("opacity", op);
+      if (b.depth <= 2) line.setAttribute("filter", "url(#soft-glow)");
+
+      line.dataset.day = dd.day; line.dataset.date = dd.date;
+      line.dataset.trees = dd.trees.toLocaleString(); line.dataset.co2 = dd.co2.toLocaleString();
+      line.dataset.scoreLabel = dd.scoreLabel;
+      line.dataset.type = 'env';
+
+      treeGroup.appendChild(line);
+
+      requestAnimationFrame(() => {
+        line.style.transition = 'all 0.4s ease-out';
+        line.setAttribute("x2", b.x2); line.setAttribute("y2", b.y2);
+      });
+
+      line.addEventListener("mouseenter", () => {
+        line.setAttribute("stroke-width", w + 2); line.setAttribute("opacity", 1);
+        tooltip.querySelector('.tip-date').textContent = `Day ${line.dataset.day} — ${line.dataset.date}`;
+        tooltip.querySelector('.tip-metric').innerHTML = `🌳 ${line.dataset.trees} trees · CO₂ ${line.dataset.co2} t<br>Rating: ${line.dataset.scoreLabel}`;
+        tooltip.classList.add('visible');
+      });
+      line.addEventListener("mousemove", (e) => { tooltip.style.left = e.clientX + 14 + 'px'; tooltip.style.top = e.clientY - 10 + 'px'; });
+      line.addEventListener("mouseleave", () => { line.setAttribute("stroke-width", w); line.setAttribute("opacity", op); tooltip.classList.remove('visible'); });
+
+      segments.push(line);
+      if (b.depth > maxDepthReached) maxDepthReached = b.depth;
+    }
+
+    // --- Draw a commit-driven segment (always green) ---
+    let commitBranchIndex = 0;
+
+    function drawCommitSegment(commitInfo, delay) {
+      const b = getBranch(fullTree.length - 1 - (commitBranchIndex % fullTree.length) + commitBranchIndex);
+      // Use a separate pool of branches offset from the day branches
+      const cIdx = segments.length + commitBranchIndex;
+      const cb = getBranch(cIdx);
+      commitBranchIndex++;
+
+      const color = randomGreen(commitBranchIndex * 73.91 + 42.3);
+      const w = Math.max(1.2, 6 - cb.depth * 0.5);
+      const op = cb.depth < 3 ? 0.95 : 0.6 + (1 - cb.depth / 10) * 0.35;
+
+      const line = document.createElementNS(SVG_NS, "line");
+      line.setAttribute("x1", cb.x1); line.setAttribute("y1", cb.y1);
+      line.setAttribute("x2", cb.x1); line.setAttribute("y2", cb.y1);
+      line.setAttribute("stroke", color); line.setAttribute("stroke-width", w);
+      line.setAttribute("stroke-linecap", "round"); line.setAttribute("opacity", op);
+      if (cb.depth <= 2) line.setAttribute("filter", "url(#soft-glow)");
+
+      line.dataset.type = 'commit';
+      line.dataset.repo = commitInfo.repo;
+      line.dataset.sha = commitInfo.sha;
+      line.dataset.message = commitInfo.message;
+      line.dataset.author = commitInfo.author;
+      line.dataset.commitDate = commitInfo.date ? new Date(commitInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+      treeGroup.appendChild(line);
+
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          line.style.transition = 'all 0.5s ease-out';
+          line.setAttribute("x2", cb.x2); line.setAttribute("y2", cb.y2);
+        });
+      }, delay || 0);
+
+      line.addEventListener("mouseenter", () => {
+        line.setAttribute("stroke-width", w + 2); line.setAttribute("opacity", 1);
+        tooltip.querySelector('.tip-date').textContent = `${line.dataset.repo}`;
+        tooltip.querySelector('.tip-metric').innerHTML =
+          `<span style="color:#4ade80">${line.dataset.sha}</span> ${line.dataset.message}<br>` +
+          `by ${line.dataset.author} · ${line.dataset.commitDate}`;
+        tooltip.classList.add('visible');
+      });
+      line.addEventListener("mousemove", (e) => { tooltip.style.left = e.clientX + 14 + 'px'; tooltip.style.top = e.clientY - 10 + 'px'; });
+      line.addEventListener("mouseleave", () => { line.setAttribute("stroke-width", w); line.setAttribute("opacity", op); tooltip.classList.remove('visible'); });
+
+      commitBranches.push(line);
+      segments.push(line);
+      if (cb.depth > maxDepthReached) maxDepthReached = cb.depth;
+    }
+
+    function advanceDay() {
+      const d = generateDayData(currentDay);
+      const s = currentDay * branchesPerDay;
+      const e = s + branchesPerDay;
+      for (let i = s; i < e; i++) {
+        drawSegment(getBranch(i), d);
+      }
+      currentDay++;
+      updateUI(d);
+      prevDayData = d;
+    }
+
+    function updateUI(d) {
+      document.getElementById("day-display").textContent = currentDay.toLocaleString();
+      document.getElementById("commit-count").textContent = totalCommits.toLocaleString();
+      document.getElementById("branch-count").textContent = segments.length.toLocaleString();
+      document.getElementById("depth-display").textContent = maxDepthReached;
+      document.getElementById("bars-date").textContent = `Day ${currentDay} · ${d.date}`;
+
+      document.getElementById("bar-trees-val").textContent = d.trees.toLocaleString();
+      document.getElementById("bar-trees-fill").style.width = d.treesPct + '%';
+      setDelta("bar-trees-delta", formatDelta(d.trees, prevDayData?.trees, 'trees', false));
+
+      document.getElementById("bar-co2-val").textContent = d.co2.toLocaleString() + ' t';
+      document.getElementById("bar-co2-fill").style.width = d.co2Pct + '%';
+      setDelta("bar-co2-delta", formatDelta(d.co2, prevDayData?.co2, 't', false));
+
+      document.getElementById("bar-renew-val").textContent = d.renewable.toLocaleString() + ' MW';
+      document.getElementById("bar-renew-fill").style.width = d.renewPct + '%';
+      setDelta("bar-renew-delta", formatDelta(d.renewable, prevDayData?.renewable, 'MW', false));
+
+      document.getElementById("bar-ocean-val").textContent = d.ocean.toFixed(1) + ' t';
+      document.getElementById("bar-ocean-fill").style.width = d.oceanPct + '%';
+      setDelta("bar-ocean-delta", formatDelta(d.ocean, prevDayData?.ocean, 't', false));
+
+      document.getElementById("bar-air-val").textContent = d.air + ' AQI';
+      document.getElementById("bar-air-fill").style.width = d.airPct + '%';
+      setDelta("bar-air-delta", formatDelta(d.air, prevDayData?.air, 'AQI', true));
+
+      document.getElementById("bar-wild-val").textContent = d.wildlife.toFixed(1);
+      document.getElementById("bar-wild-fill").style.width = d.wildPct + '%';
+      setDelta("bar-wild-delta", formatDelta(d.wildlife, prevDayData?.wildlife, 'pts', false));
+
+      const pct = Math.round(d.score * 100);
+      const circ = 2 * Math.PI * 22;
+      document.getElementById("score-ring").style.strokeDashoffset = circ * (1 - d.score);
+      document.getElementById("score-ring").style.stroke = scoreToColor(d.score);
+      document.getElementById("overall-score-val").textContent = `${pct}%`;
+      document.getElementById("overall-score-desc").textContent = d.scoreLabel + ' — weighted composite of all metrics';
+    }
+
+    function reset() {
+      if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+      treeGroup.innerHTML = '';
+      segments = []; currentDay = 0; maxDepthReached = 0; prevDayData = null;
+      commitBranches = []; commitBranchIndex = 0;
+      treeGeneration = 0;
+      fullTree = buildTreeStructure(0);
+      document.getElementById("day-display").textContent = "0";
+      document.getElementById("commit-count").textContent = totalCommits.toLocaleString();
+      document.getElementById("branch-count").textContent = "0";
+      document.getElementById("depth-display").textContent = "0";
+      document.getElementById("bars-date").textContent = "—";
+      ['trees', 'co2', 'renew', 'ocean', 'air', 'wild'].forEach(k => {
+        document.getElementById(`bar-${k}-val`).textContent = '—';
+        document.getElementById(`bar-${k}-fill`).style.width = '0%';
+        const del = document.getElementById(`bar-${k}-delta`);
+        del.textContent = '—'; del.className = 'stat-bar-delta neutral';
+      });
+      document.getElementById("score-ring").style.strokeDashoffset = 138.23;
+      document.getElementById("overall-score-val").textContent = '—';
+      document.getElementById("overall-score-desc").textContent = 'Waiting for data…';
+      // Re-draw commit branches after reset
+      if (window._commitData) {
+        growCommitBranches(window._commitData);
+      }
+    }
+
+    // --- Grow branches from real commits ---
+    function growCommitBranches(commitData) {
+      const commits = commitData.recent;
+      totalCommits = commitData.total;
+      document.getElementById("commit-count").textContent = totalCommits.toLocaleString();
+
+      // Draw each commit as a branch with staggered animation
+      commits.forEach((c, i) => {
+        drawCommitSegment(c, i * 15); // 15ms stagger
+      });
+
+      // Update branch count after all drawn
+      setTimeout(() => {
+        document.getElementById("branch-count").textContent = segments.length.toLocaleString();
+      }, commits.length * 15 + 100);
+    }
+
+    document.getElementById("btn-next").addEventListener("click", advanceDay);
+    document.getElementById("btn-auto").addEventListener("click", () => {
+      if (autoInterval) { clearInterval(autoInterval); autoInterval = null; return; }
+      autoInterval = setInterval(() => { advanceDay(); }, 50);
+    });
+    document.getElementById("btn-reset").addEventListener("click", reset);
+
+    function copyLink() {
+      const url = 'https://github.com/your-username/evercommit';
+      navigator.clipboard.writeText(url).then(() => {
+        const toast = document.getElementById('copy-toast');
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 2200);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        const toast = document.getElementById('copy-toast');
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 2200);
+      });
+    }
+
+    // --- Init: seed days, then fetch and grow commit branches ---
+    for (let i = 0; i < 5; i++) advanceDay();
+
+    (async function init() {
+      try {
+        const commitData = await fetchAllCommits();
+        window._commitData = commitData;
+        growCommitBranches(commitData);
+      } catch (e) {
+        console.warn('Could not fetch commits:', e);
+        document.getElementById("commit-count").textContent = '—';
+      } finally {
+        document.body.classList.add('ready');
+      }
+    })();
+  </script>
+  </script>
+</body>
+
+</html>

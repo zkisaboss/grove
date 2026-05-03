@@ -1,0 +1,27 @@
+<svg width="800" height="80" viewBox="0 0 800 80" xmlns="http://www.w3.org/2000/svg">
+    
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="100%" r="60%"><stop offset="0%" stop-color="rgba(74,222,128,0.06)" /><stop offset="100%" stop-color="transparent" /></radialGradient>
+    <linearGradient id="grad-trees" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#166534"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
+    <linearGradient id="grad-co2" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#38bdf8"/></linearGradient>
+    <linearGradient id="grad-renew" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#713f12"/><stop offset="100%" stop-color="#eab308"/></linearGradient>
+    <linearGradient id="grad-ocean" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#164e63"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+    <linearGradient id="grad-air" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#3b0764"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+    <linearGradient id="grad-wild" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#7c2d12"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+    <filter id="soft-glow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+    <style>
+      .serif { font-family: 'DM Serif Display', serif; }
+      .mono { font-family: 'IBM Plex Mono', monospace; }
+      .text-dim { fill: #5a6e60; }
+      .text-accent { fill: #4ade80; }
+      .text-base { fill: #c8d6ce; }
+      .card-bg { fill: #0f1512; stroke: rgba(74, 222, 128, 0.08); stroke-width: 1px; }
+    </style>
+  </defs>
+
+    
+    <!-- Transparent Background -->
+    <text x="50%" y="35" text-anchor="middle" class="serif text-accent" font-size="32" font-weight="bold" letter-spacing="-0.5">Living Fractal Tree</text>
+    <text x="50%" y="60" text-anchor="middle" class="mono text-dim" font-size="14" letter-spacing="1">ENVIRONMENTAL PROGRESS, ONE BRANCH PER DAY</text>
+  
+  </svg>

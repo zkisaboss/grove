@@ -1,0 +1,19 @@
+{
+  "day": 0,
+  "score": 0.33979181818181814,
+  "trees": 25663,
+  "co2": 398,
+  "renewable": 135,
+  "ocean": 21.4,
+  "air": 93,
+  "wildlife": 31.6,
+  "date": "2025-01-01",
+  "formattedDate": "Jan 1, 2025",
+  "scoreLabel": "Below avg",
+  "treesPct": 42.77166666666667,
+  "co2Pct": 33.166666666666664,
+  "renewPct": 27,
+  "oceanPct": 26.749999999999996,
+  "airPct": 43.18181818181818,
+  "wildPct": 31.6
+}
