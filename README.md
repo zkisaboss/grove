@@ -9,7 +9,7 @@
 
 <div align="center">
 
-**[View Full Interactive Version (Vercel) &rarr;](https://grove-fractal.vercel.app/)**
+**[View Full Interactive Version (Vercel) &rarr;](https://grove-alpha.vercel.app/)**
 
 
 This tree grows with each day, committing data daily to this repository. It acts as a public database of our collective efforts to combat climate change.
