@@ -1,0 +1,18 @@
+{
+  "day": 22,
+  "score": 0.11146666666666667,
+  "trees": 119,
+  "co2": 5,
+  "renewable": 2,
+  "ocean": 0.2,
+  "air": 23,
+  "wildlife": 12,
+  "date": "Sep 12, 2026",
+  "treesPct": 2.3800000000000003,
+  "co2Pct": 2.5,
+  "renewPct": 2,
+  "oceanPct": 2,
+  "airPct": 46,
+  "wildPct": 12,
+  "scoreLabel": "Poor"
+}
