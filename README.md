@@ -1,16 +1,16 @@
-![Living Fractal Tree](assets/title.svg)
+<div align="center">
 
-[![Living Tree Animation](assets/growth.gif)](https://grove-fractal.vercel.app/)
+<img src="assets/title.svg" alt="Living Fractal Tree" width="720">
 
-![Daily Metrics](assets/metrics.svg)
-![Legend](assets/legend.svg)
+<a href="https://grove-fractal.vercel.app/"><img src="assets/growth.gif" alt="Living Tree Animation" width="720"></a>
+
+<img src="assets/metrics.svg" alt="Daily Metrics" width="720">
+
+<img src="assets/legend.svg" alt="Legend" width="720">
 
 <br>
 
-<div align="center">
-
 **[View Full Interactive Version (Vercel) &rarr;](https://grove-alpha.vercel.app/)**
-
 
 This tree grows with each day, committing data daily to this repository. It acts as a public database of our collective efforts to combat climate change.
 
